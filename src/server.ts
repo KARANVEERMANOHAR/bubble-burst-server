@@ -106,11 +106,11 @@ app.post(
   async (req: express.Request, res: express.Response) => {
     const data = req.body;
     isScreen1Busy = true;
-    io.emit("screen1", data);
     io.emit("controller1", { isScreen1Busy });
     io.emit("statusUpdate", { isScreen1Busy, isScreen2Busy });
     const player = await insertOne(data);
     const sendPlayer = player?.insertedId?.toString();
+    io.emit("screen1", { ...data, sendPlayer });
     res.json({ status: "sent to screen1", data, isScreen1Busy, sendPlayer });
   }
 );
@@ -121,11 +121,11 @@ app.post(
   async (req: express.Request, res: express.Response) => {
     const data = req.body;
     isScreen2Busy = true;
-    io.emit("screen2", data);
     io.emit("controller2", { isScreen2Busy });
     io.emit("statusUpdate", { isScreen1Busy, isScreen2Busy });
     const player = await insertOne(data);
     const sendPlayer = player?.insertedId?.toString();
+    io.emit("screen2", { ...data, sendPlayer });
     res.json({ status: "sent to screen2", data, isScreen2Busy, sendPlayer });
   }
 );
@@ -192,16 +192,12 @@ app.get("/api/winner", async (req: express.Request, res: express.Response) => {
         const ts1 = new Date(players[0].timestamp).getTime();
         const ts2 = new Date(players[1].timestamp).getTime();
 
-        console.log(
-          "Timestamps:",
-          ts1,
-          ts2,
-          "Difference:",
-          Math.abs(ts1 - ts2)
-        );
-
         if (Math.abs(ts1 - ts2) <= 20000) {
-          result = players;
+          result = [...players].sort(
+            (a, b) =>
+              b.score - a.score ||
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
         } else {
           result = [players[0]];
         }
